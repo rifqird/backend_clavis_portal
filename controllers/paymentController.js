@@ -86,109 +86,101 @@ export const get_recent_payment=async(req,res)=>{
 }
 
 export const truncateInsertPayments=async(req,res)=>{
-    try {
-        const response = await fetch(
-            `${BASE_URL}/api/account/cust_get_payment`
-        );
+    const response = await fetch(
+        `${BASE_URL}/api/account/cust_get_payment`
+    );
 
-        if (!response.ok) {
-            return res.status(response.status).json({
-                message: "Gagal mengambil data dari API external",
-            });
-        }
-
-        const api = await response.json();
-        const rows = api?.data ?? [];
-        if (!Array.isArray(rows) || rows.length === 0) {
-            return res.status(400).json({ message: "Data kosong" });
-        }
-        const client = await pool.connect();
-        try {
-            await client.query("BEGIN");
-
-            // 1️⃣ TRUNCATE TABLE
-            await client.query(`TRUNCATE TABLE payments RESTART IDENTITY`);
-            for (const r of rows) {
-                const toJsonArray = (v) => {
-                    if (v === null || v === undefined) return null;
-
-                    // jika sudah array objekt js → stringify
-                    if (Array.isArray(v) || typeof v === "object") {
-                        return JSON.stringify(v);
-                    }
-
-                    // jika format string {2,"Name"} → perbaiki jadi ["2","Name"]
-                    if (typeof v === "string") {
-                        const fixed = v
-                        .replace(/^{/, "[")
-                        .replace(/}$/, "]")
-                        .replace(/""/g, '"');
-
-                        try {
-                            return JSON.stringify(JSON.parse(fixed));
-                        } catch {
-                            return JSON.stringify([]);
-                        }
-                    }
-
-                    return JSON.stringify(v);
-                };
-                await client.query(
-                    `INSERT INTO payments (
-                    id,
-                    company_currency_id,
-                    available_payment_method_line_ids,
-                    date,
-                    name,
-                    journal_id,
-                    company_id,
-                    payment_method_line_id,
-                    partner_id,
-                    amount_signed,
-                    currency_id,
-                    activity_ids,
-                    amount_company_currency_signed,
-                    state
-                    )
-                    VALUES (
-                        $1,$2::jsonb,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10,
-                        $11::jsonb,$12,$13,$14
-                    )`,
-                    [
-                        r.id,
-                        toJsonArray(r.company_currency_id),
-                        [r.available_payment_method_line_ids],
-                        r.date ? new Date(r.date) : null,
-                        r.name,
-                        toJsonArray(r.journal_id),
-                        toJsonArray(r.company_id),
-                        toJsonArray(r.payment_method_line_id),
-                        toJsonArray(r.partner_id),
-                        r.amount_signed,
-                        toJsonArray(r.currency_id),
-                        [r.activity_ids],
-                        r.amount_company_currency_signed,
-                        r.state
-                    ]
-                );
-            }
-            await client.query("COMMIT");
-
-            console.log({
-                message: "SYNC SUCCESS — truncate & insert payments table",
-                inserted: rows.length,
-            });
-        } catch (err) {
-            await client.query("ROLLBACK");
-            console.error("DB Error:", err);
-        } finally {
-            client.release();
-        }
-    } catch (err) {
-        console.error("Error:", err);
-        return res.status(500).json({
-            message: "Server Error",
-            error: err.message,
+    if (!response.ok) {
+        return res.status(response.status).json({
+            message: "Gagal mengambil data dari API external",
         });
+    }
+
+    const api = await response.json();
+    const rows = api?.data ?? [];
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ message: "Data kosong" });
+    }
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+
+        // 1️⃣ TRUNCATE TABLE
+        await client.query(`TRUNCATE TABLE payments RESTART IDENTITY`);
+        for (const r of rows) {
+            const toJsonArray = (v) => {
+                if (v === null || v === undefined) return null;
+
+                // jika sudah array objekt js → stringify
+                if (Array.isArray(v) || typeof v === "object") {
+                    return JSON.stringify(v);
+                }
+
+                // jika format string {2,"Name"} → perbaiki jadi ["2","Name"]
+                if (typeof v === "string") {
+                    const fixed = v
+                    .replace(/^{/, "[")
+                    .replace(/}$/, "]")
+                    .replace(/""/g, '"');
+
+                    try {
+                        return JSON.stringify(JSON.parse(fixed));
+                    } catch {
+                        return JSON.stringify([]);
+                    }
+                }
+
+                return JSON.stringify(v);
+            };
+            await client.query(
+                `INSERT INTO payments (
+                id,
+                company_currency_id,
+                available_payment_method_line_ids,
+                date,
+                name,
+                journal_id,
+                company_id,
+                payment_method_line_id,
+                partner_id,
+                amount_signed,
+                currency_id,
+                activity_ids,
+                amount_company_currency_signed,
+                state
+                )
+                VALUES (
+                    $1,$2::jsonb,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10,
+                    $11::jsonb,$12,$13,$14
+                )`,
+                [
+                    r.id,
+                    toJsonArray(r.company_currency_id),
+                    [r.available_payment_method_line_ids],
+                    r.date ? new Date(r.date) : null,
+                    r.name,
+                    toJsonArray(r.journal_id),
+                    toJsonArray(r.company_id),
+                    toJsonArray(r.payment_method_line_id),
+                    toJsonArray(r.partner_id),
+                    r.amount_signed,
+                    toJsonArray(r.currency_id),
+                    [r.activity_ids],
+                    r.amount_company_currency_signed,
+                    r.state
+                ]
+            );
+        }
+        await client.query("COMMIT");
+
+        console.log({
+            message: "SYNC SUCCESS — truncate & insert payments table",
+            inserted: rows.length,
+        });
+    } catch (err) {
+        await client.query("ROLLBACK");
+        console.error("DB Error:", err);
+    } finally {
+        client.release();
     }
 }
