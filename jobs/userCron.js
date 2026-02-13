@@ -12,6 +12,7 @@ import { truncateInsertJournalItem } from "../controllers/JournalItemController.
 import { truncateInsertMoveHistory } from "../controllers/moveHistoryController.js";
 import { truncateInsertSaleOrders } from "../controllers/saleOrderController.js";
 import { truncateInsertAnalyticItem } from "../controllers/analyticItemController.js";
+import { truncateInsertPurchaseOrderOustanding } from "../controllers/purchaseOutstandingController.js";
 export const startUserIcon=()=>{
     cron.schedule("* * * * *", async () => {
 
@@ -91,6 +92,12 @@ export const startUserIcon=()=>{
             await truncateInsertAnalyticItem();
         } catch (err) {
             console.log("analytic item gagal:", err.message);
+        }
+
+        try {
+            await truncateInsertPurchaseOrderOustanding();
+        } catch (err) {
+            console.log("purchase order outstanding gagal:", err.message);
         }
     });
 }

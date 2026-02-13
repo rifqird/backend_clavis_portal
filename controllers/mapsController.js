@@ -1,5 +1,34 @@
 import pool from '../db.js';
+import axios from 'axios';
+export const get_sales_area=async(req,res)=>{
+    try {
+        const { sales_name, filter_date } = req.query;
 
+        const response = await axios.get(
+            "http://192.168.0.104:8000/api/data-visits-leads-map",
+            {
+                params: {
+                    sales_name,
+                    filter_date
+                }
+            }
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: response.data.data
+        });
+
+    } catch (error) {
+        console.error("Error:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Gagal mengambil data",
+            error: error.message
+        });
+    }
+}
 export const get_area = async (req, res) => {
     const { sales_name, date } = req.query;
 
