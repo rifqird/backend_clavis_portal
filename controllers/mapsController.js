@@ -1,34 +1,44 @@
 import pool from '../db.js';
 import axios from 'axios';
-export const get_sales_area=async(req,res)=>{
+export const get_sales_area = async (req, res) => {
     try {
-        const { sales_name, filter_date } = req.query;
+        const { sales_name, filter_date, status } = req.query;
 
         const response = await axios.get(
-            "http://192.168.0.104:8000/api/data-visits-leads-map",
-            {
-                params: {
-                    sales_name,
-                    filter_date
-                }
-            }
+            "http://192.168.0.104:8000/api/data-visits-leads-map"
         );
 
-        return res.status(200).json({
-            success: true,
-            data: response.data.data
+        let result = response.data.data;
+        result = result.filter(item => item.visit_status_label !== 'VISIT');
+
+        result = result.filter(item => {
+            const matchSales =
+                !sales_name ||
+                item.sales_name?.toLowerCase().includes(sales_name.toLowerCase());
+
+            const matchDate =
+                !filter_date ||
+                item.visit_at?.startsWith(filter_date);
+
+            const matchStatus =
+                !status ||
+                item.visit_status_label === status;
+
+            return matchSales && matchDate && matchStatus;
         });
 
-    } catch (error) {
-        console.error("Error:", error.message);
+        return res.json({
+            success: true,
+            data: result
+        });
 
+    } catch (err) {
         return res.status(500).json({
             success: false,
-            message: "Gagal mengambil data",
-            error: error.message
+            message: err.message
         });
     }
-}
+};
 export const get_area = async (req, res) => {
     const { sales_name, date } = req.query;
 
